@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# tp-menu: one launcher menu for themes, screenshots, game mode, sound and power.
+set -u
+
+menu() { rofi -dmenu -i -p "$1" -mesg "${2:-}"; }
+confirm() { [[ "$(printf 'No\nYes\n' | menu "$1")" == "Yes" ]]; }
+
+sound_state="$(tp-sound status)"
+game_state="off"; [[ -e "${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/tidepool/gamemode" ]] && game_state="on"
+
+choice="$(printf '%s\n' \
+  "Theme" \
+  "Screenshot" \
+  "Game mode ($game_state)" \
+  "Minecraft session" \
+  "Sound ($sound_state)" \
+  "Clipboard history" \
+  "Lock" \
+  "Suspend" \
+  "Log out" \
+  "Reboot" \
+  "Shut down" \
+  "Reload Hyprland" | menu "menu" "Active theme: $(tp-theme current)")"
+
+case "$choice" in
+  Theme)               tp-theme pick ;;
+  Screenshot)
+    shot="$(printf '%s\n' "Area" "Window" "Full screen" | menu "shot")"
+    sleep 0.3
+    case "$shot" in
+      Area)        tp-screenshot area ;;
+      Window)      tp-screenshot window ;;
+      "Full screen") tp-screenshot full ;;
+    esac
+    ;;
+  "Game mode"*)        tp-gamemode toggle ;;
+  "Minecraft session") setsid -f tp-mc >/dev/null 2>&1 ;;
+  Sound*)              tp-sound toggle ;;
+  "Clipboard history") cliphist list | menu "clip" | cliphist decode | wl-copy ;;
+  Lock)                hyprlock ;;
+  Suspend)             systemctl suspend ;;
+  "Log out")           confirm "Log out?" && hyprctl dispatch 'hl.dsp.exit()' ;;
+  Reboot)              confirm "Reboot?" && systemctl reboot ;;
+  "Shut down")         confirm "Shut down?" && systemctl poweroff ;;
+  "Reload Hyprland")   hyprctl reload ;;
+esac

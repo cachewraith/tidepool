@@ -1,0 +1,129 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 38,
+  "margin-top": 8,
+  "margin-left": 12,
+  "margin-right": 12,
+  "spacing": 0,
+  "reload_style_on_change": true,
+
+  "modules-left": ["custom/logo", "hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right": [
+    "mpris", "pulseaudio", "network", "cpu", "memory", "temperature", "battery",
+    "custom/theme", "custom/game", "tray", "custom/power"
+  ],
+
+  "custom/logo": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "tp-menu"
+  },
+
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "sort-by": "number",
+    "persistent-workspaces": { "*": 5 }
+  },
+
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 44,
+    "separate-outputs": true,
+    "rewrite": {
+      "(.*) — Mozilla Firefox": "  $1"
+    }
+  },
+
+  "clock": {
+    "format": "  {:%a %d %b   %H:%M}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>"
+  },
+
+  "mpris": {
+    "format": "{player_icon}  {title}",
+    "format-paused": "{status_icon}  {title}",
+    "player-icons": { "default": "" },
+    "status-icons": { "paused": "" },
+    "max-length": 34,
+    "on-click": "playerctl play-pause",
+    "on-scroll-up": "playerctl next",
+    "on-scroll-down": "playerctl previous"
+  },
+
+  "pulseaudio": {
+    "format": "{icon}  {volume}%",
+    "format-muted": "  mute",
+    "format-icons": { "default": ["", ""] },
+    "on-click": "pavucontrol",
+    "on-click-right": "tp-volume mute",
+    "on-scroll-up": "tp-volume up",
+    "on-scroll-down": "tp-volume down"
+  },
+
+  "network": {
+    "format-wifi": "  {signalStrength}%",
+    "format-ethernet": "  wired",
+    "format-disconnected": "  off",
+    "tooltip-format-wifi": "{essid}  {ipaddr}",
+    "tooltip-format-ethernet": "{ifname}  {ipaddr}",
+    "on-click": "kitty -e nmtui"
+  },
+
+  "cpu": {
+    "format": "  {usage}%",
+    "interval": 3,
+    "on-click": "kitty -e btop"
+  },
+
+  "memory": {
+    "format": "󰍛  {percentage}%",
+    "interval": 5,
+    "tooltip-format": "{used:0.1f}G of {total:0.1f}G",
+    "on-click": "kitty -e btop"
+  },
+
+  "temperature": {
+    "critical-threshold": 80,
+    "format": "  {temperatureC}°C",
+    "interval": 5
+  },
+
+  "battery": {
+    "states": { "warning": 25, "critical": 12 },
+    "format": "{icon}  {capacity}%",
+    "format-charging": "  {capacity}%",
+    "format-plugged": "  {capacity}%",
+    "format-icons": ["", "", "", "", ""],
+    "tooltip-format": "{timeTo}"
+  },
+
+  "custom/theme": {
+    "exec": "tp-theme label",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 9,
+    "on-click": "tp-theme next",
+    "on-click-right": "tp-theme pick"
+  },
+
+  "custom/game": {
+    "exec": "tp-gamemode status",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "tp-gamemode toggle"
+  },
+
+  "tray": {
+    "icon-size": 16,
+    "spacing": 8
+  },
+
+  "custom/power": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "tp-menu"
+  }
+}

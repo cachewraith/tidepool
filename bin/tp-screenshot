@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# tp-screenshot: take a screenshot, copy it, save it, and tell you.
+#   tp-screenshot area | full | window
+# Saves to ~/Pictures/Screenshots (override with TP_SHOT_DIR).
+set -u
+
+mode="${1:-area}"
+dir="${TP_SHOT_DIR:-$HOME/Pictures/Screenshots}"
+state="${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/tidepool"
+mkdir -p "$dir"
+file="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+
+accent="#6fd0c0"
+[[ -s "$state/current/accent" ]] && accent="$(cat "$state/current/accent")"
+
+case "$mode" in
+  area)
+    geo="$(slurp -b '#00000066' -c "${accent}ff" -s "${accent}33" -w 2)" || exit 0
+    grim -g "$geo" "$file"
+    ;;
+  full)
+    grim "$file"
+    ;;
+  window)
+    geo="$(hyprctl activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')"
+    grim -g "$geo" "$file"
+    ;;
+  *)
+    echo "usage: tp-screenshot area|full|window" >&2
+    exit 1
+    ;;
+esac
+
+[[ -s "$file" ]] || exit 1
+wl-copy < "$file"
+tp-sound screenshot
+if command -v notify-send >/dev/null 2>&1; then
+  notify-send -a Tidepool -i "$file" "Screenshot saved" "$(basename "$file")" || true
+fi

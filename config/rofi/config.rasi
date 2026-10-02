@@ -1,0 +1,17 @@
+/* ~/.config/rofi/config.rasi: behavior only. Colors and shape are in theme.rasi, written by tp-theme. */
+
+configuration {
+  modes: "drun,run,window,filebrowser";
+  show-icons: true;
+  display-drun: "apps";
+  display-run: "run";
+  display-window: "windows";
+  display-filebrowser: "files";
+  drun-display-format: "{name}";
+  window-format: "{w}   {c}   {t}";
+  matching: "fuzzy";
+  sort: true;
+  sorting-method: "fzf";
+}
+
+@import "theme.rasi"

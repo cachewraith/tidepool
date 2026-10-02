@@ -1,0 +1,36 @@
+# Nightshift: developer theme. Navy ground, blue and violet accents, syntax-friendly colors.
+THEME_NAME="Nightshift"
+THEME_KIND="dark"
+SOUND_PACK="soft"
+
+BASE="#0e1220"
+MANTLE="#131829"
+SURFACE="#1a2038"
+OVERLAY="#262d4d"
+TEXT="#c8d3f5"
+SUBTEXT="#7f8bb3"
+ACCENT="#7aa2f7"
+ACCENT2="#bb9af7"
+ON_ACCENT="#0e1220"
+GREEN="#9ece6a"
+YELLOW="#e0af68"
+RED="#f7768e"
+BLUE="#7dcfff"
+MAUVE="#bb9af7"
+
+ROUNDING=10
+BORDER=2
+GAPS_IN=4
+GAPS_OUT=10
+OPACITY_ACTIVE=1.0
+OPACITY_INACTIVE=0.95
+BLUR_SIZE=6
+BLUR_PASSES=3
+BLUR_VIBRANCY=0.14
+SHADOW_RANGE=20
+SHADOW="00000070"
+BAR_ALPHA=0.82
+BAR_RADIUS=10
+WIN_ALPHA=0.90
+FONT_UI="JetBrainsMono Nerd Font"
+FONT_MONO="JetBrainsMono Nerd Font"

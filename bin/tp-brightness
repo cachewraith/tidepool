@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# tp-brightness: change screen brightness with an on-screen notification.
+#   tp-brightness up | down
+set -u
+
+case "${1:-}" in
+  up)   brightnessctl -q set 5%+ ;;
+  down) brightnessctl -q set 5%- ;;
+  *)    echo "usage: tp-brightness up|down" >&2; exit 1 ;;
+esac
+
+pct="$(brightnessctl -m | cut -d, -f4 | tr -d '%')"
+if command -v notify-send >/dev/null 2>&1; then
+  notify-send -a Tidepool -h string:x-canonical-private-synchronous:tp-brightness \
+    -h "int:value:$pct" "Brightness" "${pct}%" || true
+fi

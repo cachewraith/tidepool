@@ -1,0 +1,36 @@
+# Nether: Minecraft theme. Square corners, thick borders, lava orange on netherrack.
+THEME_NAME="Nether"
+THEME_KIND="dark"
+SOUND_PACK="blocky"
+
+BASE="#1a0c0c"
+MANTLE="#211010"
+SURFACE="#2d1616"
+OVERLAY="#432220"
+TEXT="#f1dcd0"
+SUBTEXT="#a98a80"
+ACCENT="#ff6a2b"
+ACCENT2="#ffb02e"
+ON_ACCENT="#1a0c0c"
+GREEN="#2bb5a0"
+YELLOW="#ffb02e"
+RED="#e04646"
+BLUE="#3fd0ff"
+MAUVE="#b44fa3"
+
+ROUNDING=0
+BORDER=3
+GAPS_IN=4
+GAPS_OUT=8
+OPACITY_ACTIVE=1.0
+OPACITY_INACTIVE=1.0
+BLUR_SIZE=3
+BLUR_PASSES=1
+BLUR_VIBRANCY=0.1
+SHADOW_RANGE=18
+SHADOW="ff6a2b33"
+BAR_ALPHA=0.96
+BAR_RADIUS=0
+WIN_ALPHA=0.95
+FONT_UI="JetBrainsMono Nerd Font"
+FONT_MONO="JetBrainsMono Nerd Font"

@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+# tp-theme: render and apply a Tidepool theme.
+#
+#   tp-theme list              list themes
+#   tp-theme current           print the active theme id
+#   tp-theme set <id>          render every app config for <id> and reload them
+#   tp-theme next | prev       cycle themes
+#   tp-theme random            pick a different theme at random
+#   tp-theme pick              choose with a rofi menu
+#   tp-theme new <id> [from]   copy a theme so you can edit its palette.sh
+#   tp-theme label             JSON for the Waybar theme button
+#
+# Environment: TP_NO_RELOAD=1 renders files without reloading apps (used for tests).
+#              TP_CONFIG_HOME overrides $XDG_CONFIG_HOME (default ~/.config).
+set -euo pipefail
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(dirname "$(dirname "$SELF")")"
+CFG="${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+STATE="$CFG/tidepool"
+OUT="$STATE/current"
+THEMES="$ROOT/themes"
+TPL="$ROOT/templates"
+DEFAULT_THEME="tidepool"
+
+COLOR_VARS=(BASE MANTLE SURFACE OVERLAY TEXT SUBTEXT ACCENT ACCENT2 ON_ACCENT GREEN YELLOW RED BLUE MAUVE)
+STYLE_VARS=(ROUNDING BORDER GAPS_IN GAPS_OUT OPACITY_ACTIVE OPACITY_INACTIVE BLUR_SIZE BLUR_PASSES
+            BLUR_VIBRANCY SHADOW_RANGE SHADOW BAR_ALPHA BAR_RADIUS WIN_ALPHA FONT_UI FONT_MONO)
+
+die() { echo "tp-theme: $*" >&2; exit 1; }
+
+list_themes() {
+  find "$THEMES" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+}
+
+current_theme() {
+  if [[ -s "$STATE/theme" ]]; then cat "$STATE/theme"; else echo "$DEFAULT_THEME"; fi
+}
+
+rgb_of() {
+  local h="${1#\#}"
+  printf '%d, %d, %d' "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}"
+}
+
+alpha_hex() {
+  awk -v a="$1" 'BEGIN { if (a > 1) a = 1; if (a < 0) a = 0; printf "%02x", int(a * 255 + 0.5) }'
+}
+
+# Load a palette and compute every derived value the templates use.
+# The values are read indirectly (${!v}) by build_sed, which shellcheck cannot see.
+# shellcheck disable=SC2034
+load_palette() {
+  local id="$1" file="$THEMES/$1/palette.sh" v
+  [[ -f "$file" ]] || die "no such theme: $id (try: tp-theme list)"
+
+  # Defaults let a palette stay short
+  THEME_NAME="$id"; THEME_KIND="dark"; SOUND_PACK="soft"
+  ROUNDING=12; BORDER=2; GAPS_IN=5; GAPS_OUT=12
+  OPACITY_ACTIVE=1.0; OPACITY_INACTIVE=0.94
+  BLUR_SIZE=7; BLUR_PASSES=3; BLUR_VIBRANCY=0.17
+  SHADOW_RANGE=20; SHADOW="00000066"
+  BAR_ALPHA=0.8; BAR_RADIUS=12; WIN_ALPHA=0.9
+  FONT_UI="JetBrainsMono Nerd Font"; FONT_MONO="JetBrainsMono Nerd Font"
+
+  # shellcheck disable=SC1090
+  source "$file"
+
+  for v in "${COLOR_VARS[@]}"; do
+    [[ -n "${!v:-}" ]] || die "theme $id is missing $v"
+  done
+
+  THEME_ID="$id"
+  STATE_DIR="$STATE"
+  INNER_RADIUS=$(( ROUNDING * 2 / 3 ))
+  BAR_ALPHA_HEX="$(alpha_hex "$BAR_ALPHA")"
+  WIN_ALPHA_HEX="$(alpha_hex "$WIN_ALPHA")"
+  PANEL_ALPHA_HEX="$(alpha_hex "$(awk -v a="$WIN_ALPHA" 'BEGIN { print a + 0.08 }')")"
+
+  for v in "${COLOR_VARS[@]}"; do
+    printf -v "${v}_H" '%s' "${!v#\#}"
+    printf -v "${v}_RGB" '%s' "$(rgb_of "${!v}")"
+  done
+
+  # Terminal "black" and "white" must stay readable on both dark and light grounds
+  if [[ "$THEME_KIND" == "light" ]]; then
+    ANSI_BLACK="$TEXT"; ANSI_BBLACK="$SUBTEXT"; ANSI_WHITE="$OVERLAY"; ANSI_BWHITE="$SURFACE"
+  else
+    ANSI_BLACK="$SURFACE"; ANSI_BBLACK="$OVERLAY"; ANSI_WHITE="$SUBTEXT"; ANSI_BWHITE="$TEXT"
+  fi
+}
+
+build_sed() {
+  local file="$1" v val
+  local all=(THEME_ID THEME_NAME THEME_KIND SOUND_PACK STATE_DIR HOME INNER_RADIUS
+             BAR_ALPHA_HEX WIN_ALPHA_HEX PANEL_ALPHA_HEX
+             ANSI_BLACK ANSI_BBLACK ANSI_WHITE ANSI_BWHITE
+             "${COLOR_VARS[@]}" "${STYLE_VARS[@]}")
+  for v in "${COLOR_VARS[@]}"; do all+=("${v}_H" "${v}_RGB"); done
+  : > "$file"
+  for v in "${all[@]}"; do
+    val="${!v}"
+    val="${val//\\/\\\\}"
+    val="${val//&/\\&}"
+    val="${val//|/\\|}"
+    printf 's|@%s@|%s|g\n' "$v" "$val" >> "$file"
+  done
+}
+
+# Keep a copy of a file the first time we take it over
+claim_file() {
+  local out="$1" rel
+  mkdir -p "$STATE/backup"
+  touch "$STATE/managed"
+  if ! grep -qxF "$out" "$STATE/managed"; then
+    if [[ -e "$out" || -L "$out" ]]; then
+      rel="${out#"$CFG"/}"
+      cp -P --no-clobber "$out" "$STATE/backup/${rel//\//__}" 2>/dev/null || true
+    fi
+    echo "$out" >> "$STATE/managed"
+  fi
+}
+
+render_all() {
+  local sedf tpl out leftovers
+  sedf="$(mktemp)"
+  build_sed "$sedf"
+
+  mkdir -p "$OUT"
+  local -A MAP=(
+    [hypr-theme.lua.tpl]="$CFG/hypr/theme.lua"
+    [hyprlock.conf.tpl]="$CFG/hypr/hyprlock.conf"
+    [waybar.css.tpl]="$CFG/waybar/style.css"
+    [rofi.rasi.tpl]="$CFG/rofi/theme.rasi"
+    [kitty.conf.tpl]="$CFG/kitty/theme.conf"
+    [swaync.css.tpl]="$CFG/swaync/style.css"
+    [swaync-config.json.tpl]="$CFG/swaync/config.json"
+    [cava.conf.tpl]="$CFG/cava/config"
+    [starship.toml.tpl]="$OUT/starship.toml"
+    [fzf.sh.tpl]="$OUT/fzf.sh"
+  )
+
+  for tpl in "${!MAP[@]}"; do
+    out="${MAP[$tpl]}"
+    mkdir -p "$(dirname "$out")"
+    claim_file "$out"
+    sed -f "$sedf" "$TPL/$tpl" > "$out.tmp"
+    mv -f "$out.tmp" "$out"
+    leftovers="$(grep -noE '@[A-Z][A-Z0-9_]*@' "$out" || true)"
+    [[ -z "$leftovers" ]] || echo "tp-theme: unreplaced placeholder in $out: $leftovers" >&2
+  done
+
+  rm -f "$sedf"
+
+  local wall="$ROOT/wallpapers/$THEME_ID.png"
+  [[ -f "$wall" ]] || wall="$ROOT/wallpapers/$DEFAULT_THEME.png"
+  ln -sfn "$wall" "$OUT/wallpaper.png"
+  printf '%s\n' "$SOUND_PACK" > "$OUT/sound_pack"
+  printf '%s\n' "$ACCENT" > "$OUT/accent"
+  printf '%s\n' "$THEME_ID" > "$STATE/theme"
+}
+
+set_wallpaper() {
+  command -v swaybg >/dev/null 2>&1 || return 0
+  [[ -n "${WAYLAND_DISPLAY:-}" ]] || return 0
+  local old=()
+  mapfile -t old < <(pgrep -x swaybg || true)
+  setsid -f swaybg -i "$OUT/wallpaper.png" -m fill >/dev/null 2>&1
+  sleep 0.4
+  if (( ${#old[@]} )); then kill "${old[@]}" 2>/dev/null || true; fi
+}
+
+reload_all() {
+  if command -v hyprctl >/dev/null 2>&1; then hyprctl reload >/dev/null 2>&1 || true; fi
+  pkill -SIGUSR2 -x waybar 2>/dev/null || true
+  pkill -SIGUSR1 -x kitty 2>/dev/null || true
+  if command -v swaync-client >/dev/null 2>&1; then
+    swaync-client -R >/dev/null 2>&1 || true
+    swaync-client -rs >/dev/null 2>&1 || true
+  fi
+  set_wallpaper
+  pkill -RTMIN+9 waybar 2>/dev/null || true
+}
+
+cmd_set() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || die "usage: tp-theme set <id>"
+  load_palette "$id"
+  render_all
+  if [[ "${TP_NO_RELOAD:-0}" != "1" ]]; then
+    reload_all
+    "$ROOT/bin/tp-sound" theme >/dev/null 2>&1 || true
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send -a Tidepool -h string:x-canonical-private-synchronous:tp-theme "Theme" "$THEME_NAME" || true
+    fi
+  fi
+  echo "Theme: $THEME_NAME"
+}
+
+cmd_cycle() {
+  local dir="$1" cur i n=0 pick
+  mapfile -t all < <(list_themes)
+  cur="$(current_theme)"
+  for i in "${!all[@]}"; do [[ "${all[$i]}" == "$cur" ]] && n="$i"; done
+  if [[ "$dir" == "next" ]]; then pick="${all[$(( (n + 1) % ${#all[@]} ))]}"
+  else pick="${all[$(( (n - 1 + ${#all[@]}) % ${#all[@]} ))]}"; fi
+  cmd_set "$pick"
+}
+
+cmd_random() {
+  local cur pick
+  cur="$(current_theme)"
+  pick="$(list_themes | grep -vxF "$cur" | shuf -n1)"
+  [[ -n "$pick" ]] || pick="$cur"
+  cmd_set "$pick"
+}
+
+cmd_pick() {
+  command -v rofi >/dev/null 2>&1 || die "rofi is not installed"
+  local cur pick
+  cur="$(current_theme)"
+  pick="$(list_themes | rofi -dmenu -i -p "theme" -mesg "Active: $cur" || true)"
+  [[ -n "$pick" ]] && cmd_set "$pick"
+  return 0
+}
+
+cmd_new() {
+  local id="${1:-}" from="${2:-$(current_theme)}"
+  [[ "$id" =~ ^[a-z0-9-]+$ ]] || die "usage: tp-theme new <id> [from]   (id: lowercase letters, digits, dashes)"
+  [[ ! -e "$THEMES/$id" ]] || die "theme $id already exists"
+  [[ -d "$THEMES/$from" ]] || die "no such theme to copy: $from"
+  cp -r "$THEMES/$from" "$THEMES/$id"
+  sed -i "s/^THEME_NAME=.*/THEME_NAME=\"$id\"/" "$THEMES/$id/palette.sh"
+  echo "Created $THEMES/$id. Edit palette.sh, then run: tp-theme set $id"
+}
+
+cmd_label() {
+  local id name
+  id="$(current_theme)"
+  name="$(
+    THEME_NAME="$id"
+    # shellcheck disable=SC1090
+    source "$THEMES/$id/palette.sh" 2>/dev/null
+    printf '%s' "$THEME_NAME"
+  )"
+  # \U000f03d8 is nf-md-palette; bash's printf emits it as UTF-8, which JSON allows as-is
+  printf '{"text":"\U000f03d8  %s","tooltip":"Theme: %s. Click: next theme. Right-click: pick."}\n' "$name" "$name"
+}
+
+case "${1:-}" in
+  list)    list_themes ;;
+  current) current_theme ;;
+  set)     shift; cmd_set "${1:-}" ;;
+  next)    cmd_cycle next ;;
+  prev)    cmd_cycle prev ;;
+  random)  cmd_random ;;
+  pick)    cmd_pick ;;
+  new)     shift; cmd_new "$@" ;;
+  label)   cmd_label ;;
+  init)    cmd_set "$(current_theme)" ;;
+  *)       sed -n '2,13p' "$SELF" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

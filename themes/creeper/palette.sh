@@ -1,0 +1,36 @@
+# Creeper: Minecraft theme. Square corners, thick borders, grass green on stone.
+THEME_NAME="Creeper"
+THEME_KIND="dark"
+SOUND_PACK="blocky"
+
+BASE="#1a1d17"
+MANTLE="#20241b"
+SURFACE="#2a3024"
+OVERLAY="#3a4232"
+TEXT="#e4eadb"
+SUBTEXT="#98a28a"
+ACCENT="#5cc84a"
+ACCENT2="#c9a15a"
+ON_ACCENT="#15200f"
+GREEN="#5cc84a"
+YELLOW="#f2c94c"
+RED="#d9534f"
+BLUE="#4fc3f7"
+MAUVE="#9b6bd6"
+
+ROUNDING=0
+BORDER=3
+GAPS_IN=4
+GAPS_OUT=8
+OPACITY_ACTIVE=1.0
+OPACITY_INACTIVE=1.0
+BLUR_SIZE=3
+BLUR_PASSES=1
+BLUR_VIBRANCY=0.1
+SHADOW_RANGE=0
+SHADOW="00000000"
+BAR_ALPHA=0.96
+BAR_RADIUS=0
+WIN_ALPHA=0.96
+FONT_UI="JetBrainsMono Nerd Font"
+FONT_MONO="JetBrainsMono Nerd Font"

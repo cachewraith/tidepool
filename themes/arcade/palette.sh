@@ -1,0 +1,36 @@
+# Arcade: game theme. Near-black violet with neon magenta and cyan.
+THEME_NAME="Arcade"
+THEME_KIND="dark"
+SOUND_PACK="arcade"
+
+BASE="#0b0a14"
+MANTLE="#110f1f"
+SURFACE="#1a1730"
+OVERLAY="#2a2550"
+TEXT="#e6e1ff"
+SUBTEXT="#8e87c0"
+ACCENT="#ff3cac"
+ACCENT2="#2de2e6"
+ON_ACCENT="#0b0a14"
+GREEN="#39ff88"
+YELLOW="#ffd23f"
+RED="#ff4d6d"
+BLUE="#4d9fff"
+MAUVE="#b57bff"
+
+ROUNDING=6
+BORDER=2
+GAPS_IN=5
+GAPS_OUT=10
+OPACITY_ACTIVE=1.0
+OPACITY_INACTIVE=0.96
+BLUR_SIZE=5
+BLUR_PASSES=2
+BLUR_VIBRANCY=0.25
+SHADOW_RANGE=26
+SHADOW="ff3cac44"
+BAR_ALPHA=0.86
+BAR_RADIUS=6
+WIN_ALPHA=0.92
+FONT_UI="JetBrainsMono Nerd Font"
+FONT_MONO="JetBrainsMono Nerd Font"

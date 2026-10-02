@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# tp-gamemode: turn off animations, blur, shadows, gaps and rounding for max frames.
+#   tp-gamemode on | off | toggle | status
+# hyprland.lua reads the flag file at load, so this just flips it and reloads.
+set -u
+
+STATE="${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/tidepool"
+FLAG="$STATE/gamemode"
+mkdir -p "$STATE"
+
+case "${1:-toggle}" in
+  on)     touch "$FLAG" ;;
+  off)    rm -f "$FLAG" ;;
+  toggle) if [[ -e "$FLAG" ]]; then rm -f "$FLAG"; else touch "$FLAG"; fi ;;
+  status)
+    if [[ -e "$FLAG" ]]; then
+      printf '{"text":"\\uf11b","class":"on","tooltip":"Game mode ON: effects off. Click to turn off."}\n'
+    else
+      printf '{"text":"\\uf11b","class":"off","tooltip":"Game mode off. Click to turn on."}\n'
+    fi
+    exit 0
+    ;;
+  *) echo "usage: tp-gamemode on|off|toggle|status" >&2; exit 1 ;;
+esac
+
+if command -v hyprctl >/dev/null 2>&1; then hyprctl reload >/dev/null 2>&1 || true; fi
+pkill -RTMIN+8 waybar 2>/dev/null || true
+tp-sound theme >/dev/null 2>&1 || true
+
+if command -v notify-send >/dev/null 2>&1; then
+  if [[ -e "$FLAG" ]]; then msg="On: effects off"; else msg="Off: effects restored"; fi
+  notify-send -a Tidepool -h string:x-canonical-private-synchronous:tp-game "Game mode" "$msg" || true
+fi

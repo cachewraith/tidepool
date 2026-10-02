@@ -1,0 +1,36 @@
+# Frost: glassy light theme. Heavy blur, translucent panels, ice blue accent.
+THEME_NAME="Frost"
+THEME_KIND="light"
+SOUND_PACK="glass"
+
+BASE="#e6eef4"
+MANTLE="#dce7ef"
+SURFACE="#cfdce7"
+OVERLAY="#b9cad8"
+TEXT="#14212b"
+SUBTEXT="#50657a"
+ACCENT="#2a7fd4"
+ACCENT2="#17a2b8"
+ON_ACCENT="#ffffff"
+GREEN="#2f9e5b"
+YELLOW="#b7791f"
+RED="#d64545"
+BLUE="#2a7fd4"
+MAUVE="#7a5fd0"
+
+ROUNDING=18
+BORDER=1
+GAPS_IN=6
+GAPS_OUT=16
+OPACITY_ACTIVE=1.0
+OPACITY_INACTIVE=0.88
+BLUR_SIZE=14
+BLUR_PASSES=4
+BLUR_VIBRANCY=0.3
+SHADOW_RANGE=30
+SHADOW="1a2b4033"
+BAR_ALPHA=0.42
+BAR_RADIUS=18
+WIN_ALPHA=0.52
+FONT_UI="JetBrainsMono Nerd Font"
+FONT_MONO="JetBrainsMono Nerd Font"

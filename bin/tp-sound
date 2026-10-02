@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# tp-sound: play a theme sound.
+#   tp-sound <name>      names: startup notify volume theme screenshot bell
+#   tp-sound on|off|toggle|status
+set -u
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(dirname "$(dirname "$SELF")")"
+STATE="${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/tidepool"
+MUTE="$STATE/mute"
+
+case "${1:-}" in
+  "")      sed -n '2,4p' "$SELF" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  on)      rm -f "$MUTE"; echo "Sounds on"; exit 0 ;;
+  off)     mkdir -p "$STATE"; touch "$MUTE"; echo "Sounds off"; exit 0 ;;
+  toggle)  if [[ -e "$MUTE" ]]; then rm -f "$MUTE"; echo "Sounds on"
+           else mkdir -p "$STATE"; touch "$MUTE"; echo "Sounds off"; fi
+           exit 0 ;;
+  status)  if [[ -e "$MUTE" ]]; then echo "off"; else echo "on"; fi; exit 0 ;;
+esac
+
+[[ -e "$MUTE" ]] && exit 0
+
+pack="soft"
+[[ -s "$STATE/current/sound_pack" ]] && pack="$(cat "$STATE/current/sound_pack")"
+
+file="$ROOT/sounds/$pack/$1.wav"
+[[ -f "$file" ]] || file="$ROOT/sounds/soft/$1.wav"
+[[ -f "$file" ]] || exit 0
+
+if command -v pw-play >/dev/null 2>&1; then
+  setsid -f pw-play "$file" >/dev/null 2>&1
+elif command -v paplay >/dev/null 2>&1; then
+  setsid -f paplay "$file" >/dev/null 2>&1
+elif command -v aplay >/dev/null 2>&1; then
+  setsid -f aplay -q "$file" >/dev/null 2>&1
+fi
+exit 0

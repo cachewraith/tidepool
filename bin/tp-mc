@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# tp-mc: Minecraft session helper.
+# Switches to the Creeper theme, turns on game mode, starts your launcher,
+# and puts your theme and effects back when the launcher closes.
+#   tp-mc [launcher args]
+# Set TP_MC_THEME=<id> to use another theme, or TP_MC_KEEP_THEME=1 to leave the theme alone.
+set -u
+
+launcher=""
+for c in prismlauncher PrismLauncher minecraft-launcher; do
+  if command -v "$c" >/dev/null 2>&1; then launcher="$c"; break; fi
+done
+if [[ -z "$launcher" ]]; then
+  echo "tp-mc: no launcher found. Install one: sudo pacman -S prismlauncher" >&2
+  exit 1
+fi
+
+STATE="${TP_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}/tidepool"
+was_game=0; [[ -e "$STATE/gamemode" ]] && was_game=1
+prev_theme="$(tp-theme current)"
+mc_theme="${TP_MC_THEME:-creeper}"
+
+restore() {
+  [[ "$was_game" == 1 ]] || tp-gamemode off
+  [[ "${TP_MC_KEEP_THEME:-0}" == 1 ]] || tp-theme set "$prev_theme"
+}
+trap restore EXIT
+
+[[ "${TP_MC_KEEP_THEME:-0}" == 1 ]] || tp-theme set "$mc_theme"
+tp-gamemode on
+
+if command -v gamemoderun >/dev/null 2>&1; then
+  gamemoderun "$launcher" "$@"
+else
+  "$launcher" "$@"
+fi

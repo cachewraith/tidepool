@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# tp-volume: change volume or mute, with a sound and an on-screen notification.
+#   tp-volume up | down | mute | mic
+set -u
+
+SINK="@DEFAULT_AUDIO_SINK@"
+SRC="@DEFAULT_AUDIO_SOURCE@"
+
+notify() {
+  command -v notify-send >/dev/null 2>&1 || return 0
+  notify-send -a Tidepool -h string:x-canonical-private-synchronous:tp-volume "$@" || true
+}
+
+case "${1:-}" in
+  up)   wpctl set-mute "$SINK" 0; wpctl set-volume -l 1.0 "$SINK" 5%+ ;;
+  down) wpctl set-volume "$SINK" 5%- ;;
+  mute) wpctl set-mute "$SINK" toggle ;;
+  mic)
+    wpctl set-mute "$SRC" toggle
+    if wpctl get-volume "$SRC" | grep -q MUTED; then notify "Microphone" "Muted"
+    else notify "Microphone" "On"; fi
+    tp-sound volume
+    exit 0
+    ;;
+  *) echo "usage: tp-volume up|down|mute|mic" >&2; exit 1 ;;
+esac
+
+out="$(wpctl get-volume "$SINK")"
+vol="$(awk '{ printf "%d", $2 * 100 }' <<<"$out")"
+
+if [[ "$out" == *MUTED* ]]; then
+  notify -h int:value:0 "Volume" "Muted"
+else
+  notify -h "int:value:$vol" "Volume" "${vol}%"
+  tp-sound volume
+fi
